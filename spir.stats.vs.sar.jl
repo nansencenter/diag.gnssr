@@ -84,8 +84,9 @@ cora = cor(refa, refb)
 corb = cor(refc, refb)
 
 outfil = ARGS[1] * "_" * ARGS[2] * ".cor"                                     # and save the statistics to file
+(z, z, group, z, z, track) = split(split(ARGS[1], ".")[1], "_")
 fpa = My.ouvre(outfil, "w")
-form  = @sprintf("%8.5f %8.5f %8.5f\n", cora, corb, (cora + corb) / 2.0)
+form  = @sprintf("%s %s %8.5f %8.5f %8.5f\n", group, track, cora, corb, (cora + corb) / 2.0)
 write(fpa, form)
 close(fpa)
 exit(0)

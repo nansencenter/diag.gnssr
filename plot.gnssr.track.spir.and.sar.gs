@@ -146,9 +146,32 @@ if (gpsfil = "")
   "draw string 5.50 8.00 Sentinel-1a `3s`0`bO`aHH`n (dB) at "resol"-m"
   "set grads off" ; inner_cbarn("1.00 1 10.00 4.25 b")
 else
-  "draw string 5.50 8.00 Anomalous `3s`0`bO`aHH`n (dB) and "gpsnam" MSS"
-  "set grads off" ; inner_cbarn("1.00 1  1.50 4.25 a")
-  "set grads off" ; inner_cbarn("1.00 1  9.80 4.25 b")
+  a = 1 ; while (substr(gpsfil,a,1) != "0") ; a = a + 1 ; endwhile
+  stem = substr(gpsfil,1,a-1)
+  a = 0 ; while (a < 8)
+    tarfil = substr(sarfil,1,25)".hdr"
+    if (a = 0) ; corfil = "data_skyvan/"stem"01_L1_AB.nc.txt_"tarfil".cor" ; endif
+    if (a = 1) ; corfil = "data_skyvan/"stem"02_L1_BA.nc.txt_"tarfil".cor" ; endif
+    if (a = 2) ; corfil = "data_skyvan/"stem"03_L1_CD.nc.txt_"tarfil".cor" ; endif
+    if (a = 3) ; corfil = "data_skyvan/"stem"04_L1_DC.nc.txt_"tarfil".cor" ; endif
+    if (a = 4) ; corfil = "data_skyvan/"stem"05_L1_AB.nc.txt_"tarfil".cor" ; endif
+    if (a = 5) ; corfil = "data_skyvan/"stem"06_L1_BA.nc.txt_"tarfil".cor" ; endif
+    if (a = 6) ; corfil = "data_skyvan/"stem"07_L1_CD.nc.txt_"tarfil".cor" ; endif
+    if (a = 7) ; corfil = "data_skyvan/"stem"08_L1_DC.nc.txt_"tarfil".cor" ; endif
+    say "reading "corfil
+    filestat = read(corfil)
+    line = sublin(filestat,2)
+    group = subwrd(line,1)
+    track = subwrd(line,2)
+    corav = subwrd(line,3)
+    corav = math_format("%5.2f", corav)
+    filestat = close(corfil)
+    "draw string 7.0 "4.5-a*0.4" "track":"corav
+    a = a + 1
+  endwhile
+  "draw string 5.50 7.70 Anomalous `3s`0`bO`aHH`n (dB) and "gpsnam" MSS"
+  "set grads off" ; inner_cbarn("1.00 1  1.60 4.25 a")
+  "set grads off" ; inner_cbarn("1.00 1  9.70 4.25 b")
 endif
 
 if (gpsfil = "")

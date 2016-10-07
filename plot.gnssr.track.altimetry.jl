@@ -25,7 +25,7 @@ for a = 1:timlen
   timstr[a] = My.dateadd("2000-01-01-000000", round(timall[timmsk][a] * 1000) / 1000, "sc")
 end
 
-pars = ["lat", "lon", "rad_distance_to_land", "swh_ku", "swh_c", "wind_speed_alt", "range_ku", "range_c", "alt"]
+pars = ["lat", "lon", "rad_distance_to_land", "swh_ku", "swh_c", "wind_speed_alt", "range_ku", "range_c", "alt", "ssha", "iono_corr_alt_ku", "model_dry_tropo_corr", "rad_wet_tropo_corr", "sea_state_bias_ku", "solid_earth_tide", "ocean_tide_sol1", "pole_tide", "inv_bar_corr", "hf_fluctuations_corr", "mean_sea_surface", "surface_type", "ice_flag"]
 parn = length(pars)
 data = Array(Float64, timlen, parn)
 
@@ -36,8 +36,9 @@ for (a, para) in enumerate(pars)                                              # 
   data[:,a] = vara[timmsk]
 end
 
-data[:,7] = data[:,9] - data[:,7]
-data[:,8] = data[:,9] - data[:,8]
+#data[:,10] = data[:,9] - data[:,7] - data[:,11] - data[:,12] - data[:,13] - data[:,14] - data[:,15] - data[:,16] - data[:,17] - data[:,18] - data[:,19] #- data[:,20]
+#data[:,7] = data[:,9] - data[:,7] - data[:,11] - data[:,12] - data[:,13]
+#data[:,8] = data[:,9] - data[:,8] - data[:,11] - data[:,12] - data[:,13]
 fpa = My.ouvre(altfil * ".txt", "w")                                          # echo all data to an ASCII file for
 for a = 1:timlen, b = 1:parn                                                  # later geospatial plots
   form  = @sprintf("%15.8lf", data[a,b])
@@ -46,10 +47,11 @@ for a = 1:timlen, b = 1:parn                                                  # 
 # print(form)
 end
 close(fpa)
+@show mean(data, 1)
 
-ppp = Winston.Table(parn-1,1) ; setattr(ppp, "cellpadding", -0.5)             # and make timeseries plot
+ppp = Winston.Table(parn,1) ; setattr(ppp, "cellpadding", -0.5)               # and make timeseries plot
 for (a, para) in enumerate(pars)
-  if a < parn
+# if a < parn
 #   print("adding $para\n")
     tpos = (a, 1)
     tmp = Winston.FramedPlot()
@@ -58,7 +60,7 @@ for (a, para) in enumerate(pars)
           Winston.add(ppp[tpos...], tmp)
     tmp = Winston.PlotLabel(.53, .92, para, "size", 3.4)
           Winston.add(ppp[tpos...], tmp)
-  end
+# end
 end
 
 xyzzy = ARGS[1]*".png"

@@ -1,5 +1,6 @@
-* This script plots collocated GNSS-R and conventional altimetry
-* and can be executed using a command like
+* This script plots collocated GNSS-R and TOPEX/Poseidonr-referenced altimetry.
+* The assumed conversion between the GNSS-R reference ellipsoid (WGS84) and the
+* satellite altimeter at 60N is 0.71m.  Execution uses a command like
 *
 *     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt windgps"
 *     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt wavegps"
@@ -7,6 +8,7 @@
 *     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt windalt"
 *     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt wavealt"
 *     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt hghtalt"
+*     grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_G1_track00_L1_ZZ.txt hghtall"
 *
 * - RD September 2016.
 
@@ -17,6 +19,8 @@ alt = subwrd(args,1)
 gps = subwrd(args,2)
 chk = subwrd(args,3)
 
+gpsfil = gps                         ; gpsnam = substr(gpsfil,5,3)
+if (gpsnam = "G1_" | gpsnam = "G3_") ; gpsnam = substr(gpsfil,5,2) ; endif
 alok = 0 ; filestat = read(alt) ; if (sublin(filestat,1) != 0) ; say alt" is not available" ; else ; alok = 1 ; filestat = close(alt) ; endif
 gpok = 0 ; filestat = read(gps) ; if (sublin(filestat,1) != 0) ; say gps" is not available" ; else ; gpok = 1 ; filestat = close(gps) ; endif
 * if (sfok = 0 & drok = 0) ; "quit" ; endif
@@ -42,8 +46,13 @@ gpok = 0 ; filestat = read(gps) ; if (sublin(filestat,1) != 0) ; say gps" is not
 
 "sdfopen data_ecmwf/interim_2015-12-01_2015-12-05_oper.nc"
 "sdfopen data_ecmwf/interim_2015-12-01_2015-12-05_wave.nc"
+"sdfopen /home/ricani/data/mdt/MSS/MSS_CNES_CLS_11_2M.nc"
 "set lat 59.70 60.45"
 "set lon 25.05 26.85"
+if (chk = "hghtall")
+  "set lat 59.80 60.30"
+  "set lon 25.40 26.60"
+endif
 "set mpdset hires"
 "set mpt * 1 1 10"
 "set grid off"
@@ -59,11 +68,11 @@ endif
 if (chk = "wavegps" | chk = "wavealt")
   va = 0.2  ; vb = 0.4  ; vc = 0.6  ; vd = 0.8  ; ve = 1.0  ; vf = 1.2  ; vg = 1.4  ; vh = 1.6  ; vi = 1.8  ; vj = 2.0  ; vk = 2.2
 endif
-if (chk = "hghtgps" | chk = "hghtalt")
+if (chk = "hghtgps" | chk = "hghtalt" | chk = "hghtall")
   va = 13.0 ; vb = 13.5 ; vc = 14.0 ; vd = 14.5 ; ve = 15.0 ; vf = 15.5 ; vg = 16.0 ; vh = 16.5 ; vi = 17.0 ; vj = 17.5 ; vk = 18.0
 endif
 
-"set xlint 0.2" ; "set ylint 0.1"
+"set xlint 0.2" ; "set ylint 0.1"                                             ;* store shading information
 "set grads off" ; "set clab off" ; "set clevs 0" ; "d msl/100"
 "set gxout grfill"
 "set ccols  9   14    4   11    5   13    3   10    7   12    8    2"
@@ -74,12 +83,19 @@ endif
 
 "clear"
 "set gxout contour"
-"set xlint 0.2" ; "set ylint 0.1"
-"set grads off" ; "set clab off" ; "set clevs 0" ; "d msl/100"
+"set xlint 0.2" ; "set ylint 0.1" ; "set cthick 12"
+"set ccols  9   14    4   11    5   13    3   10    7   12    8    2"
+"set clevs   "va" "vb" "vc" "vd" "ve" "vf" "vg" "vh" "vi" "vj" "vk
+"set grads off" ; "set clab forced" ; "set clopts -1 7 0.20" ; "d sea_level.3(t=1) - 0.545"
+*"set grads off" ; "set clab off" ; "set clevs 0" ; "d msl/100"
 
-if (1 = 1)
-  if (chk = "windgps" | chk = "wavegps") ; drop = gps ; endif
-  if (chk = "windalt" | chk = "wavealt") ; drop = alt ; endif
+iter = 1 ; tmp = ""
+if (chk = "hghtall") ; iter = 2 ; tmp = "hghtall" ; endif
+while (iter > 0)
+  if (tmp = "hghtall" & iter = 1) ; chk = "hghtgps" ; endif
+  if (tmp = "hghtall" & iter = 2) ; chk = "hghtalt" ; endif
+  if (chk = "windgps" | chk = "wavegps" | chk = "hghtgps") ; drop = gps ; endif
+  if (chk = "windalt" | chk = "wavealt" | chk = "hghtalt") ; drop = alt ; endif
   "q gxinfo"
   line3 = sublin(result,3)
   line4 = sublin(result,4)
@@ -101,9 +117,11 @@ if (1 = 1)
     if (chk = "wavegps")
       drop_wspd = subwrd(line,7)
     endif
-    if (chk = "hghtgps")
+    if (chk = "hghtgps")                                                      ;* remove atmospheric correction in GNSS-R SSH
       drop_ideg = subwrd(line,9)
-      drop_wspd = subwrd(line,5) - (subwrd(line,4) / 2.0 / math_sin(drop_ideg * 3.141592654 / 180.0))
+*     drop_wspd = subwrd(line,5) - (subwrd(line,4) / 2.0 / math_sin(drop_ideg * 3.141592654 / 180.0))
+      drop_wspd = subwrd(line,5)
+      drop_sigm = subwrd(line,6)
     endif
 *   altpars = ["lat",           "lon",            "rad_distance_to_land", "swh_ku",            "swh_c", "wind_speed_alt", "range_ku",    "range_c",     "alt"]
     if (chk = "windalt")
@@ -113,7 +131,7 @@ if (1 = 1)
       drop_wspd = subwrd(line,4)                                              ;* swh_ku
     endif
     if (chk = "hghtalt")
-      drop_wspd = subwrd(line,7)                                              ;* alt - range_ku (precalculated)
+      drop_wspd = subwrd(line,9) - subwrd(line,7) - subwrd(line,11) - subwrd(line,12) - subwrd(line,13) - 0.545
     endif
     if                   (drop_wspd < va) ; drop_colr =  9 ; endif
     if (drop_wspd >= va & drop_wspd < vb) ; drop_colr = 14 ; endif
@@ -128,12 +146,15 @@ if (1 = 1)
     if (drop_wspd >= vj & drop_wspd < vk) ; drop_colr =  8 ; endif
     if (drop_wspd >= vk)                  ; drop_colr =  2 ; endif
     "q w2xy "drop_ilon" "drop_ilat ; rec = sublin(result,1) ; obsx = subwrd(rec,3) ; obsy = subwrd(rec,6)
-    dotsize = 0.09 ; if (chk = "windalt" | chk = "wavealt" | chk = "hghtalt") ; dotsize = 0.19 ; endif
+    dotsize = 0.09 ; if (chk != "hghtgps" | drop_sigm > 0.007) ; dotsize = 0.03 ; endif
+    if (chk = "windalt" | chk = "wavealt" | chk = "hghtalt") ; dotsize = 0.19 ; endif
     "set line "drop_colr" 1 5" ; "draw mark 3 "obsx" "obsy" "dotsize ; "set line 1 1 5"
     filestat = read(drop)
   endwhile
   filestat = close(drop)
-endif
+  iter = iter - 1
+endwhile
+if (tmp = "hghtall") ; chk = "hghtall" ; endif
 
 "set grads off" ; "set clab off" ; "set clevs 0" ; "d msl/100"                ;* plot ECMWF vector field
 if (chk = "windgps" | chk = "windalt")
@@ -156,6 +177,7 @@ if (chk = "hghtgps") ; "draw string 5.50 7.00 ECMWF Interim Altimetry (m) 12 UTC
 if (chk = "windalt") ; "draw string 5.50 7.00 JASON-2 10-m wind speed (m/s) 16 UTC 3 December 2015" ; endif
 if (chk = "wavealt") ; "draw string 5.50 7.00 JASON-2 SWH (m) 16 UTC 3 December 2015"               ; endif
 if (chk = "hghtalt") ; "draw string 5.50 7.00 JASON-2 Altimetry (m) 16 UTC 3 December 2015"         ; endif
+if (chk = "hghtall") ; "draw string 5.50 7.00 JASON-2 and SPIR-"gpsnam" Altimetry (m)"              ; endif
 "set grads off" ; inner_cbarn("0.80 0 4.20 1.20")
 
 *"set string 1 l 6"
@@ -172,6 +194,7 @@ if (chk = "hghtgps") ; plotnam = "plot.ECMWF.hght."gps ; endif
 if (chk = "windalt") ; plotnam = "plot.ECMWF.wind."alt ; endif
 if (chk = "wavealt") ; plotnam = "plot.ECMWF.wave."alt ; endif
 if (chk = "hghtalt") ; plotnam = "plot.ECMWF.hght."alt ; endif
+if (chk = "hghtall") ; plotnam = "plot.ECMWF.hght."alt"."gps ; endif
 
 #"run gui_print_colour "plotnam
 say "printim "plotnam".png png white x1100 y850"
