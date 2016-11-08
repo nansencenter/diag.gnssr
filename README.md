@@ -82,6 +82,122 @@ wrkj ; grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_
        grads -blc "plot.gnssr.track.spir.and.altim JA2_GPN_2PdP273_092_20151203_155445_20151203_165058.nc.txt WAV_E19_track00_L1_ZZ.txt hghtall"
        di plot.ECMWF.hght.JA2_GPN_2PdP273_092_20151203_155445*
 
+# create a mirror of the SSTL TDS-1 wind speed retrievals
+       cd /net/sverdrup-1/vol/Projects/E-GEM/L2
+       echo mirror "Data/L2" . | lftp ftp.merrbys.org
+
+# convert the TDS-1 XML data files to ASCII, with use of RD33 onward safest (6-9,16-20,22-27,33,37-39,41,43-56,59-61,63-67,69,70)
+# (0-5 commissioning; 12-15 orbital elements corrupt; 21 calibration; 28-32 DDM and attitude suspect; 34 unknown, 36,40,42,57,58,62,68 missing)
+wrkj ; parallel julia /home/ricani/bin/techdemosat.xml.to.ascii.jl ::: /net/sverdrup-1/vol/Projects/E-GEM/L2/Tracks/*
+       wc RD00000[1-5]* RD00001[2-5]* RD00002[189]* RD00003[0-2]*
+       mkdir all ; mv RD* data_tds ; cat data_tds/RD0000[3-7]*txt > all/gnss.tds1.txt
+
+# average 45 days of TDS-1 data (20150603 to 20160418) to the 6-h and 0.125-degree resolution of the ECMWF analysis (on johansen)
+wrkj ; seq 335 669 | parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.collate.jl all/gnss.tds1.txt
+       cat all/gnss.tds1.txt.2* > all/gnss.tds1.txt.all
+
+# identify all locations with at least one daily-average observation
+wrkj ; cd all ; mkdir plot.available plot.histogr plot.locate
+       jjj techdemosat.wind.speed.locate.jl gnss.tds1.txt.all /home/ricani/data/ecmwf/ECMWF_Interim_invariants_0.125.nc
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate"
+       mv plot.techdemosat.wind.speed.dots*locate*png plot.locate
+
+# make an initial split of the daily-average observations into cal/val/extra groups (based only on insitu, and not analysis, availability)
+wrkj ; cd all
+       jjj techdemosat.wind.speed.collate.split.jl gnss.tds1.txt.all.locate
+       jjj techdemosat.wind.speed.collate.split.jl gnss.tds1.txt.all.locate_1.0_valid
+       jjj techdemosat.wind.speed.collate.split.jl gnss.tds1.txt.all.locate_1.0_valid_1.0_valid
+       sort gnss.tds1.txt.all.locate_1.0_valid                     > gnss.tds1.txt.all.locate_1.0_calib_remainder
+       sort gnss.tds1.txt.all.locate_1.0_valid_1.0_calib           > gnss.tds1.txt.all.locate_1.0_valid
+       sort gnss.tds1.txt.all.locate_1.0_valid_1.0_valid           > gnss.tds1.txt.all.locate_1.0_valid_remainder
+       sort gnss.tds1.txt.all.locate_1.0_valid_1.0_valid_1.0_calib > gnss.tds1.txt.all.locate_1.0_extra
+       sort gnss.tds1.txt.all.locate_1.0_valid_1.0_valid_1.0_valid > gnss.tds1.txt.all.locate_1.0_extra_remainder
+       rm gnss.tds1.txt.all.locate_1.0*1.0*
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_calib"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_calib_remainder"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_valid"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_valid_remainder"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_extra"
+       xvfb-run -a grads -blc "techdemosat.wind.speed.locate gnss.tds1.txt.all.locate_1.0_extra_remainder"
+       mv plot.techdemosat.wind.speed.dots*locate*png plot.locate
+
+# further split the in situ cal/val observations by location and store files in an insitu dir
+wrkj ; mkdir insitu
+       sort -k2,2 -k3,3 -k1,1 all/gnss.tds1.txt.all > gnss.tds1.txt.all.sort
+       parallel julia /home/ricani/bin/techdemosat.wind.speed.collate.split.location.jl ::: all/gnss.tds1.txt.all.locate_1.0_????? ::: gnss.tds1.txt.all.sort
+       cd insitu ; ls -1 ins* | grep -v GEM > z.list ; cd .. ; wc insitu/z.list
+       rm gnss.tds1.txt.all.sort
+
+# create example ncdumps of ERA Interim data (downloaded by month from http://apps.ecmwf.int/datasets/data/interim-full-daily)
+wrkj ; mkdir ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-06_oper.nc > ncdump/interim_2015-06_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-07_oper.nc > ncdump/interim_2015-07_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-08_oper.nc > ncdump/interim_2015-08_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-09_oper.nc > ncdump/interim_2015-09_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-10_oper.nc > ncdump/interim_2015-10_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-11_oper.nc > ncdump/interim_2015-11_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2015-12_oper.nc > ncdump/interim_2015-12_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-01_oper.nc > ncdump/interim_2016-01_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-02_oper.nc > ncdump/interim_2016-02_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-03_oper.nc > ncdump/interim_2016-03_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-04_oper.nc > ncdump/interim_2016-04_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-05_oper.nc > ncdump/interim_2016-05_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-06_oper.nc > ncdump/interim_2016-06_oper.ncdump
+       ncdump /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg/interim_2016-07_oper.nc > ncdump/interim_2016-07_oper.ncdump
+
+# return to the cal/val locations to create analysis timeseries (some locations missing too much of this timeseries might be later ignored)
+wrkj ; mkdir ecmwf
+       sort      all/gnss.tds1.txt.all.locate_1.0_calib    > gnss.tds1.txt.all.locate_1.0_calib.sort
+       split -l 1000 gnss.tds1.txt.all.locate_1.0_calib.sort gnss.tds1.txt.all.locate_1.0_calib.sort
+       sort      all/gnss.tds1.txt.all.locate_1.0_valid    > gnss.tds1.txt.all.locate_1.0_valid.sort
+       split -l 1000 gnss.tds1.txt.all.locate_1.0_valid.sort gnss.tds1.txt.all.locate_1.0_valid.sort
+       sort      all/gnss.tds1.txt.all.locate_1.0_extra    > gnss.tds1.txt.all.locate_1.0_extra.sort
+       split -l 1000 gnss.tds1.txt.all.locate_1.0_extra.sort gnss.tds1.txt.all.locate_1.0_extra.sort
+RD     parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.ecmwf.timeseries.jl ::: gnss.tds1.txt.all.locate_1.0_?????.sort?? ::: /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg
+       rm gnss.tds1.txt.all.locate_1.0_?????.sor*
+
+# verify that each subdir contains the expected number of files (e.g., 26210 + 25577 + 24982 = 76769 files with 1336 dates)
+wrkj ; cd ecmwf ; ls -1 ecm* | grep -v GEM > z.list ; split -l 1000 z.list z.list ; cd .. ; wc *[a-z]/z.list
+
+# create the forward and backward extrapolated timeseries
+wrkj ; cd ecmwf ; ls z.list?? ; cd ..
+       parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.ecmwf.timeseries.extrapolated.jl ::: ecmwf ::: z.listaa z.listab z.listac z.listad z.listae z.listaf z.listag z.listah z.listai z.listaj z.listak z.listal z.listam z.listan z.listao z.listap z.listaq z.listar z.listas z.listat z.listau z.listav z.listaw z.listax z.listay z.listaz z.listba z.listbb z.listbc z.listbd z.listbe z.listbf z.listbg z.listbh z.listbi z.listbj z.listbk z.listbl z.listbm z.listbn z.listbo z.listbp z.listbq z.listbr z.listbs z.listbt z.listbu z.listbv z.listbw z.listbx z.listby z.listbz z.listca z.listcb z.listcc z.listcd z.listce z.listcf z.listcg z.listch z.listci z.listcj z.listck z.listcl z.listcm z.listcn z.listco z.listcp z.listcq z.listcr z.listcs z.listct z.listcu z.listcv z.listcw z.listcx z.listcy
+
+# assemble the insitu and analysis data for a triple collocation cal/val
+wrkj ; parallel julia /Home/ricani/bin/techdemosat.wind.speed.assemble.insitu.jl all/gnss.tds1.txt.all ::: all/gnss.tds1.txt.all.locate_1.0_?????
+       split -l 4000 all/gnss.tds1.txt.all.locate_1.0_calib_obs all/gnss.tds1.txt.all.locate_1.0_calib_obs
+       split -l 4000 all/gnss.tds1.txt.all.locate_1.0_extra_obs all/gnss.tds1.txt.all.locate_1.0_extra_obs
+       split -l 4000 all/gnss.tds1.txt.all.locate_1.0_valid_obs all/gnss.tds1.txt.all.locate_1.0_valid_obs
+       parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.assemble.ecmwf.jl ::: all/gnss.tds1.txt.all.locate_1.0_?????_obs??
+       cat all/gnss.tds1.txt.all.locate_1.0_calib_obs??.comb > all/gnss.tds1.txt.all.locate_1.0_calib_obs.comb
+       cat all/gnss.tds1.txt.all.locate_1.0_extra_obs??.comb > all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb
+       cat all/gnss.tds1.txt.all.locate_1.0_valid_obs??.comb > all/gnss.tds1.txt.all.locate_1.0_valid_obs.comb
+       mkdir all/zali.assemble ; mv all/*_1.0_?????_obs?? all/*_1.0_?????_obs??.comb all/zali.assemble
+
+# perform global and local calibrations of the two extrapolations (BEF and AFT relative to NOW) using the extra collocation set
+wrkj ; jjj techdemosat.wind.speed.extrapolated.histogram.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb
+       jjj techdemosat.wind.speed.extrapolated.histoplot.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb
+
+# perform a paired triple collocation cal/val globally
+wrkj ; jjj techdemosat.wind.speed.triple.paired.jl all/gnss.tds1.txt.all.locate_1.0_calib_obs.comb
+       mkdir all/zali.recalib.paired ; mv all/*.cali.pair all/*.recalibrate all/zali.recalib.paired
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.shfx*cali.pair
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.lhfx*cali.pair
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.wspd*cali.pair
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.airt*cali.pair
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.sstt*cali.pair
+       jjj analysis.evaluation.table.performance.paired.jl all/zali.recalib.paired/all.flux.daily.locate_2.0_calib.shum*cali.pair
+       cat all/zali.recalib.paired/*shfx*.md all/zali.recalib.paired/*lhfx*.md all/zali.recalib.paired/*wspd*.md all/zali.recalib.paired/*airt*.md all/zali.recalib.paired/*sstt*.md all/zali.recalib.paired/*shum*.md > analysis.evaluation.table.coefficients.md
+       pandoc analysis.evaluation.table.coefficients.md -o analysis.evaluation.table.coefficients.html
+       mv analysis.evaluation.table.coefficients.html analysis.evaluation.table.coefficients.0.00.html
+       mv analysis.evaluation.table.coefficients.md   analysis.evaluation.table.coefficients.0.00.md
+       mv all/zali.recalib.paired                                    all/zali.recalib.paired.0.00
+
+
+
+
+
 
 
 # the JASON-2 waveforms and more complete data can also be obtained from AVISO
