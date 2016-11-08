@@ -22,7 +22,7 @@ const RANGE            = 2.5:0.5:17.5
 const CUTOFF           = 400                            # number of collocations in a sample
 const MISS             = -9999.0                        # generic missing value
 
-if (argc = length(ARGS)) != 2
+if (argc = length(ARGS)) != 1
   print("\nUsage: jjj $(basename(@__FILE__)) gnss.tds1.txt.all.locate_1.0_extra_obs.comb\n\n")
   exit(1)
 end

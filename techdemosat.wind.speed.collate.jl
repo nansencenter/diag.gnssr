@@ -18,8 +18,8 @@ inds = [4 5 6 7 8 9 10]                                                       # 
 lats = collect(-90.000:0.125:90.000)                                          # the output grid, the days in the month, and
 lons = collect(  0.000:0.125:359.875)                                         # then initialize the (large) averaging arrays
 
-dats = Array(UTF8String, 0)
-datn = Array(   Float64, 0)
+dats = Array(String,  0)
+datn = Array(Float64, 0)
       date  = RDAT ;            push!(dats, date) ; push!(datn, My.datesous(RDAT, date, "hr")) ; date = My.dateadd(date, 6, "hr")
 while date != "20170101000000"  push!(dats, date) ; push!(datn, My.datesous(RDAT, date, "hr")) ; date = My.dateadd(date, 6, "hr")  end
 sums = zeros(length(lons), length(lats), 4, length(inds))

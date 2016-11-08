@@ -4,8 +4,10 @@
  =#
 
 using My, Interpolations
-const WSPD             = 1                              # indecies of all data variables
-const PARS             = 1
+const UWND             = 1                              # indecies of all data variables
+const VWND             = 2
+const WSPD             = 3
+const PARS             = 3
 
 const BEF              = 1                              # indecies of the source of extrapolations
 const NOW              = 2
@@ -23,8 +25,8 @@ end
 
 inner = div(EXTRA - 1, 2)
 outer = div(EXTRA + 1, 2)
-dats = Array(UTF8String, TIMS)
-data = Array(Float64,    TIMS, SRCS, PARS)
+dats = Array(String,  TIMS)
+data = Array(Float64, TIMS, SRCS, PARS)
 
 fpa = My.ouvre("$(ARGS[1])/$(ARGS[2])", "r")                                  # loop through the list of locations
 files = readlines(fpa) ; close(fpa)                                           # and process each timeseries
@@ -36,7 +38,8 @@ for fila in files
   lines = readlines(fpa) ; close(fpa)
   for (a, line) in enumerate(lines)
     vals = split(line)
-    data[a,NOW,WSPD] = float(vals[4])
+    data[a,NOW,UWND] = float(vals[5])
+    data[a,NOW,VWND] = float(vals[6])
     dats[a]          =       vals[1]
   end
 
@@ -46,7 +49,7 @@ for fila in files
     end
   end
 
-  for a = 1:PARS                                                              # simultaneously extrap from BEF and AFT
+  for a = 1:PARS-1                                                            # simultaneously extrap from BEF and AFT
     for b = 1+outer:TIMS-outer
       tmp = vec(data[b-inner:b+inner,NOW,a])
       if all(-333 .< tmp .< 333)
@@ -69,16 +72,29 @@ for fila in files
     end
   end
 
+  for a = 1:TIMS
+    if data[a,BEF,UWND] > MISS && data[a,BEF,VWND] > MISS
+      data[a,BEF,WSPD] = (data[a,BEF,UWND]^2 + data[a,BEF,VWND]^2)^0.5
+    else
+      data[a,BEF,WSPD] =  data[a,BEF,UWND]   = data[a,BEF,VWND] = MISS
+    end
+    if data[a,AFT,UWND] > MISS && data[a,AFT,VWND] > MISS
+      data[a,AFT,WSPD] = (data[a,AFT,UWND]^2 + data[a,AFT,VWND]^2)^0.5
+    else
+      data[a,AFT,WSPD] =  data[a,AFT,UWND]   = data[a,AFT,VWND] = MISS
+    end
+  end
+
   filb = "$fila.bef"                                                          # then save all extrapolations
   filc = "$fila.aft"
   fpb = My.ouvre("$(ARGS[1])/$filb", "w", false)
   fpc = My.ouvre("$(ARGS[1])/$filc", "w", false)
   (lll, lat, lon) = split(replace(fila, r"[\.]{2,}", " "))
   for a = 1:TIMS
-    formb = @sprintf("%s %11.4f %11.4f %11.4f  -9999.0000  -9999.0000  -9999.0000  -9999.0000  -9999.0000  -9999.0000\n",
-      dats[a], float(lat), float(lon), data[a,BEF,WSPD])
-    formc = @sprintf("%s %11.4f %11.4f %11.4f  -9999.0000  -9999.0000  -9999.0000  -9999.0000  -9999.0000  -9999.0000\n",
-      dats[a], float(lat), float(lon), data[a,AFT,WSPD])
+    formb = @sprintf("%s %11.4f %11.4f %11.4f %11.4f %11.4f  -9999.0000  -9999.0000  -9999.0000  -9999.0000\n",
+      dats[a], float(lat), float(lon), data[a,BEF,WSPD], data[a,BEF,UWND], data[a,BEF,VWND])
+    formc = @sprintf("%s %11.4f %11.4f %11.4f %11.4f %11.4f  -9999.0000  -9999.0000  -9999.0000  -9999.0000\n",
+      dats[a], float(lat), float(lon), data[a,AFT,WSPD], data[a,AFT,UWND], data[a,AFT,VWND])
     write(fpb, formb)
     write(fpc, formc)
   end
