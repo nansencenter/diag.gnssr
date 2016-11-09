@@ -14,12 +14,12 @@ const OCUR             = 4                              # then five buoy paramet
 const MINAVG           = 10                             # minimum number of samples for an average
 const MISS             = -9999.0                        # generic missing value
 
-if (argc = length(ARGS)) != 1
-  print("\nUsage: jjj $(basename(@__FILE__)) gnss.tds1.txt.all.locate_1.0_extra_obs.comb\n\n")
+if (argc = length(ARGS)) != 2
+  print("\nUsage: jjj $(basename(@__FILE__)) gnss.tds1.txt.all.locate_1.0_extra_obs.comb uwnd\n\n")
   exit(1)
 end
 
-step = 0.1 ; bound = collect(-40.0:step:80.0)
+step = 0.1 ; bound = collect(-40.0:step:40.0)
 
 #=
 grid = zeros(length(bound), length(bound), 2)                                 # read the before and after grids

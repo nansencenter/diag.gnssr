@@ -176,8 +176,10 @@ wrkj ; parallel julia /Home/ricani/bin/techdemosat.wind.speed.assemble.insitu.jl
        mkdir all/zali.assemble ; mv all/*_1.0_?????_obs?? all/*_1.0_?????_obs??.comb all/zali.assemble
 
 # perform global and local calibrations of the two extrapolations (BEF and AFT relative to NOW) using the extra collocation set
-wrkj ; jjj techdemosat.wind.speed.extrapolated.histogram.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb
-       jjj techdemosat.wind.speed.extrapolated.histoplot.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb
+wrkj ; jjj techdemosat.wind.speed.extrapolated.histogram.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb uwnd
+       jjj techdemosat.wind.speed.extrapolated.histogram.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb vwnd
+       jjj techdemosat.wind.speed.extrapolated.histoplot.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb uwnd
+       jjj techdemosat.wind.speed.extrapolated.histoplot.jl all/gnss.tds1.txt.all.locate_1.0_extra_obs.comb vwnd
 
 # perform a paired triple collocation cal/val globally
 wrkj ; jjj techdemosat.wind.speed.triple.paired.jl all/gnss.tds1.txt.all.locate_1.0_calib_obs.comb

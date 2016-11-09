@@ -13,21 +13,36 @@ using My
 const ODAT             = 1                              # identify indecies of the input data:
 const OLAT             = 2                              # date/lat/lon on the collocation grid
 const OLON             = 3
-const OCUR             = 4                              # plus the GNSS-R retrieval and three
-const TOTB             = 5                              # ECMWF Interim indecies (b/n/a)
-const TOTN             = 6
-const TOTA             = 7
-const RANGE            = 2.5:0.5:17.5
 
 const CUTOFF           = 400                            # number of collocations in a sample
 const MISS             = -9999.0                        # generic missing value
 
-if (argc = length(ARGS)) != 1
-  print("\nUsage: jjj $(basename(@__FILE__)) gnss.tds1.txt.all.locate_1.0_extra_obs.comb\n\n")
+if (argc = length(ARGS)) != 2
+  print("\nUsage: jjj $(basename(@__FILE__)) gnss.tds1.txt.all.locate_1.0_extra_obs.comb uwnd\n\n")
   exit(1)
 end
 
-step = 0.1 ; bound = collect(-40.0:step:80.0)
+if ARGS[2] == "wspd"
+  const OCUR           = 4                              # and identify the GNSS-R retrieval and
+  const TOTB           = 7                              # three ECMWF Interim indecies (b/n/a)
+  const TOTN           = 10
+  const TOTA           = 13
+elseif ARGS[2] == "uwnd"
+  const OCUR           = 5
+  const TOTB           = 8
+  const TOTN           = 11
+  const TOTA           = 14
+elseif ARGS[2] == "vwnd"
+  const OCUR           = 6
+  const TOTB           = 9
+  const TOTN           = 12
+  const TOTA           = 15
+else
+  print("\nERROR: choose second argument to be either wspd, uwnd, or vwnd\n\n")
+  exit(-1)
+end
+
+step = 0.1 ; bound = collect(-40.0:step:40.0)
 gridb = zeros(length(bound), length(bound)) ; meanb = zeros(length(bound))
 grida = zeros(length(bound), length(bound)) ; meana = zeros(length(bound))
 oridb = zeros(length(bound), length(bound)) ; oeanb = zeros(length(bound))
@@ -64,7 +79,7 @@ for a = 1:tinuma
   end
 end
 
-fname = ARGS[1] * ".extra.dat"
+fname = ARGS[1] * "." * ARGS[2] * ".extra.dat"
 fpa = My.ouvre(fname, "w")                                                    # and save the grids
 for (a, vala) in enumerate(bound)
   for (b, valb) in enumerate(bound)
@@ -77,7 +92,7 @@ sumb = sum(gridb, 1)                                                          # 
 suma = sum(grida, 1)                                                          # of extrapolation values in each TOTN interval
 oumb = sum(oridb, 1)
 ouma = sum(orida, 1)
-fname = ARGS[1] * ".extra.sum"
+fname = ARGS[1] * "." * ARGS[2] * ".extra.sum"
 fpa = My.ouvre(fname, "w")
 for (a, vala) in enumerate(bound)
   @printf(fpa, "%22.0f %33.11f %22.0f %33.11f %22.0f %33.11f %22.0f %33.11f\n",
@@ -85,7 +100,7 @@ for (a, vala) in enumerate(bound)
 end
 close(fpa)
 
-fname = ARGS[1] * ".extra.reg"                                                # and finally save the regression coefficients
+fname = ARGS[1] * "." * ARGS[2] * ".extra.reg"                                # and finally save the regression coefficients
 fpa = My.ouvre(fname, "w")
 (intb, slob) = linreg(regn, regb)
 (inta, sloa) = linreg(regn, rega)
@@ -133,7 +148,7 @@ for a = 1:tinuma                                                              # 
   end
 end
 
-fname = ARGS[1] * ".extra.dau"
+fname = ARGS[1] * "." * ARGS[2] * ".extra.dau"
 fpa = My.ouvre(fname, "w")                                                    # and save the grids
 for (a, vala) in enumerate(bound)
   for (b, valb) in enumerate(bound)
@@ -146,7 +161,7 @@ sumb = sum(gridb, 1)                                                          # 
 suma = sum(grida, 1)                                                          # of extrapolation values in each TOTN interval
 oumb = sum(oridb, 1)
 ouma = sum(orida, 1)
-fname = ARGS[1] * ".extra.sun"
+fname = ARGS[1] * "." * ARGS[2] * ".extra.sun"
 fpa = My.ouvre(fname, "w")
 for (a, vala) in enumerate(bound)
   @printf(fpa, "%22.0f %33.11f %22.0f %33.11f %22.0f %33.11f %22.0f %33.11f\n",
@@ -154,7 +169,7 @@ for (a, vala) in enumerate(bound)
 end
 close(fpa)
 
-fname = ARGS[1] * ".extra.reh"                                                # and finally save the regression coefficients
+fname = ARGS[1] * "." * ARGS[2] * ".extra.reh"                                # and finally save the regression coefficients
 fpa = My.ouvre(fname, "w")
 (intb, slob) = linreg(regn, regb)
 (inta, sloa) = linreg(regn, rega)
@@ -167,6 +182,9 @@ exit(0)
 
 
 #=
+gnss.tds1.txt.all.locate_1.0_calib_obs.comb
+dat, lat, lon, obsw, obsu, obsv, befw, befu, befv, noww, nowu, nowv, aftw, aftu, aftv, inc, elo, azo, ela, aza, gai
+
 count(shfs, shfn, data[:,SHFX,BEF], data[:,SHFX,NOW], data[:,SHFX,AFT])
 function count(bound::Array{Float64,1}, grid::Array{Float64,3}, bef::Array{Float64,1}, now::Array{Float64,1}, aft::Array{Float64,1})
   for a = 1:dirn
