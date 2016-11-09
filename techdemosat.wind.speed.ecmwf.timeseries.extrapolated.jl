@@ -43,7 +43,7 @@ for fila in files
     dats[a]          =       vals[1]
   end
 
-  for a = 1:PARS                                                              # set to missing the first few BEF
+  for a = 1:PARS-1                                                            # set to missing the first few BEF
     for b = 1:EXTRA+1                                                         # extrapolations (not defined below)
       data[b,BEF,a] = MISS
     end
@@ -66,7 +66,7 @@ for fila in files
     end
   end
 
-  for a = 1:PARS                                                              # set to missing the last few AFT
+  for a = 1:PARS-1                                                            # set to missing the last few AFT
     for b = 0:EXTRA                                                           # extrapolations (not defined above)
       data[TIMS-b,AFT,a] = MISS
     end

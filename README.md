@@ -154,7 +154,7 @@ wrkj ; mkdir ecmwf
        split -l 1000 gnss.tds1.txt.all.locate_1.0_valid.sort gnss.tds1.txt.all.locate_1.0_valid.sort
        sort      all/gnss.tds1.txt.all.locate_1.0_extra    > gnss.tds1.txt.all.locate_1.0_extra.sort
        split -l 1000 gnss.tds1.txt.all.locate_1.0_extra.sort gnss.tds1.txt.all.locate_1.0_extra.sort
-RD     parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.ecmwf.timeseries.jl ::: gnss.tds1.txt.all.locate_1.0_?????.sort?? ::: /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg
+       parallel -j 16 julia /Home/ricani/bin/techdemosat.wind.speed.ecmwf.timeseries.jl ::: gnss.tds1.txt.all.locate_1.0_?????.sort?? ::: /mnt/10.11.12.232/sat_auxdata/model/ecmwf/0.125-deg
        rm gnss.tds1.txt.all.locate_1.0_?????.sor*
 
 # verify that each subdir contains the expected number of files (e.g., 26210 + 25577 + 24982 = 76769 files with 1336 dates)
